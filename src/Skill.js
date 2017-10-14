@@ -48,7 +48,11 @@ class Skill extends Component {
 
 const styles = StyleSheet.create({
   skill: {
+    backgroundColor: 'white',
     border: '1px solid black',
+    boxShadow: '5px 5px',
+    cursor: 'pointer',
+    fontFamily: "'Voltaire', sans-serif",
     margin: 8,
     padding: 8,
     position: 'absolute',

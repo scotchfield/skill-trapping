@@ -35,11 +35,11 @@ const skills = [
   {name: 'Insight', cost: 1, x: 3, y: 600},
   {name: 'Conversation', cost: 1, x: 4, y: 600},
   {name: 'Menace', cost: 1, x: 5, y: 600},
-  {name: 'Minions', cost: 3, x: 2, y: 660},
+  {name: 'Minions', cost: 0, x: 2, y: 660, special: true},
   {name: 'Dismantle', cost: 1, x: 3, y: 660},
   {name: 'Convince', cost: 1, x: 4, y: 660},
   {name: 'Inspire', cost: 1, x: 5, y: 660},
-  {name: 'Variable', cost: 3, x: 2, y: 720},
+  {name: 'Variable', cost: 0, x: 2, y: 720, special: true},
   {name: 'Repair', cost: 1, x: 3, y: 720},
   {name: 'Guile', cost: 1, x: 4, y: 720},
   {name: 'Willpower', cost: 1, x: 5, y: 720},
@@ -106,6 +106,34 @@ class App extends Component {
       points: [0, false],
     };
   }
+  shortestPath(name) {
+    const {nodeEdges} = this.state;
+    const dist = {[name]: 0};
+    let done = false, queue = [];
+
+    if (!nodeEdges[name]) {
+      return dist;
+    }
+
+    nodeEdges[name].forEach(node => queue.push(node));
+    while (!done) {
+      if (queue.length) {
+        let [nodeName, nodeCost] = queue[0];
+        queue = queue.slice(1);
+
+        if (dist[nodeName] === undefined) {
+          dist[nodeName] = nodeCost;
+
+          nodeEdges[nodeName].forEach(
+            node => queue.push([node[0], node[1] + nodeCost])
+          )
+        }
+      } else {
+        done = true;
+      }
+    }
+    return dist;
+  }
   toggleSkill(name) {
     let newActive = this.state.active;
 
@@ -120,6 +148,8 @@ class App extends Component {
       };
     }
 
+    console.log('shortest path');
+    console.log(this.shortestPath(name));
     let points = [0, false];
     let activeSkills = Object.keys(newActive);
     let activeSkillsByName = skills.reduce(
@@ -129,18 +159,42 @@ class App extends Component {
       , {}
     );
 
+    const infinity = 9999999; // this is basically infinity
     let addedSkills = [];
     while (activeSkills.length > 0) {
-      let nextSkill = {cost: 0}, pos;
+      let nextSkill = {cost: infinity}, pos;
       activeSkills.forEach((skill, i) => {
         let activeSkill = activeSkillsByName[skill];
-        if (activeSkill.cost > nextSkill.cost) {
-          nextSkill = activeSkill;
+        let cost = activeSkill.cost;
+        let pathCost = infinity;
+
+        if (addedSkills.length) {
+          let paths = this.shortestPath(activeSkill.name);
+          addedSkills.forEach(addedSkill => {
+            if (
+              addedSkill !== activeSkill.name &&
+              paths[addedSkill] &&
+              paths[addedSkill] < pathCost
+            ) {
+              pathCost = paths[addedSkill];
+            }
+          });
+          console.log(pathCost);
+        }
+
+        if (pathCost < infinity) {
+          cost = pathCost;
+        }
+        if (cost < nextSkill.cost) {
+          nextSkill = {...activeSkill};
+          if (pathCost < infinity) {
+            nextSkill.cost += cost;
+          }
           pos = i;
         }
       });
 
-      let special = points[1] || nextSkill.cost === 3;
+      let special = points[1] || nextSkill.special === true;
       let newTotal = special ? points[0] : points[0] + nextSkill.cost;
       points = [newTotal, special];
 
@@ -185,12 +239,16 @@ class App extends Component {
 
 const styles = StyleSheet.create({
   legend: {
+    backgroundColor: 'white',
     border: '1px solid black',
-    left: '70%',
+    boxShadow: '5px 5px',
+    fontFamily: "'Voltaire', sans-serif",
+    fontSize: '18pt',
+    left: '65%',
     padding: 16,
     position: 'absolute',
     textAlign: 'center',
-    top: 60,
+    top: 100,
     width: 200,
   },
 });
