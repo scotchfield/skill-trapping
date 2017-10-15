@@ -84,25 +84,51 @@ const edges = [
   ['Guile', 'Disguise', 1],
   ['Dismantle', 'Repair', 0],
   ['Repair', 'Craft', 1],
-  ['Craft', 'Workplace', 1],
+  ['Craft', 'Workspace', 1],
 ];
 
 class App extends Component {
   constructor(props) {
     super(props);
 
-    const nodeEdges = {};
-    edges.forEach(edge => {
-      nodeEdges[edge[0]] = nodeEdges[edge[0]] || [];
-      nodeEdges[edge[1]] = nodeEdges[edge[1]] || [];
-      nodeEdges[edge[0]].push([edge[1], edge[2]]);
-      nodeEdges[edge[1]].push([edge[0], edge[2]]);
-    })
+    const skillsByName = skills.reduce(
+      (acc, cur) => {return {...acc, [cur.name]: cur}}, {}
+    );
+
+    const nodeEdges = {}, nodeLines = [];
+    edges.forEach((edge, i) => {
+      const [nameA, nameB, edgeCost] = edge;
+      nodeEdges[nameA] = nodeEdges[nameA] || [];
+      nodeEdges[nameB] = nodeEdges[nameB] || [];
+      nodeEdges[nameA].push([nameB, edgeCost]);
+      nodeEdges[nameB].push([nameA, edgeCost]);
+
+      const w = window.innerWidth - 16;
+      const style = {stroke: 'black'};
+      if (edgeCost === 0) {
+        style['strokeWidth'] = 3;
+      } else if (edgeCost === 1) {
+        style['strokeWidth'] = 1;
+      } else if (edgeCost === 2) {
+        style['strokeDasharray'] = '10,10';
+      }
+      nodeLines.push(
+        <line
+          key={i}
+          x1={skillsByName[nameA].x * (w / 6) + 100}
+          y1={skillsByName[nameA].y + 30}
+          x2={skillsByName[nameB].x * (w / 6) + 100}
+          y2={skillsByName[nameB].y + 30}
+          style={style}
+        />
+      )
+    });
 
     this.state = {
       active: {},
       highlight: {},
-      nodeEdges: nodeEdges,
+      nodeEdges,
+      nodeLines,
       points: [0, false],
     };
   }
@@ -148,8 +174,6 @@ class App extends Component {
       };
     }
 
-    console.log('shortest path');
-    console.log(this.shortestPath(name));
     let points = [0, false];
     let activeSkills = Object.keys(newActive);
     let activeSkillsByName = skills.reduce(
@@ -179,7 +203,6 @@ class App extends Component {
               pathCost = paths[addedSkill];
             }
           });
-          console.log(pathCost);
         }
 
         if (pathCost < infinity) {
@@ -194,9 +217,11 @@ class App extends Component {
         }
       });
 
+      console.log(points);
       let special = points[1] || nextSkill.special === true;
-      let newTotal = special ? points[0] : points[0] + nextSkill.cost;
+      let newTotal = points[0] + nextSkill.cost;
       points = [newTotal, special];
+      console.log(points);
 
       addedSkills.push(nextSkill.name);
       activeSkills = activeSkills.slice(0, pos).concat(activeSkills.slice(pos + 1));
@@ -207,20 +232,41 @@ class App extends Component {
       points,
     });
   }
-  highlightSkills(skills) {
-    skills = skills || [];
-    let highlight = {};
+  resetActive() {
+    this.setState({
+      active: [],
+      points: [0, false],
+    });
+  }
+  highlightSkills(name) {
+    const {nodeEdges} = this.state;
+
+    let skills = nodeEdges[name] || [];
+    let highlight = {[name]: 'hover'};
     skills.forEach(skill => highlight[skill[0]] = skill[1]);
     this.setState({highlight});
   }
   render() {
-    const {active, highlight, nodeEdges, points} = this.state;
+    const {active, highlight, nodeLines, points} = this.state;
 
     return (
       <div className='diagram'>
+        <svg
+          className='edges'
+          width='100%'
+          height='100vh'
+        >
+          {nodeLines}
+        </svg>
         <div className={css(styles.legend)}>
           {points[0]} total point{points[0] !== 1 ? 's' : ''}
           {points[1] && <p><b>Special Modifier</b></p>}
+        </div>
+        <div
+          className={css(styles.reset)}
+          onClick={() => this.resetActive()}
+        >
+          Reset Skills
         </div>
         {skills.map(
           skill => <Skill
@@ -229,7 +275,7 @@ class App extends Component {
             highlight={highlight[skill.name]}
             onClick={() => this.toggleSkill(skill.name)}
             onMouseLeave={() => this.highlightSkills([])}
-            onMouseOver={() => this.highlightSkills(nodeEdges[skill.name])}
+            onMouseOver={() => this.highlightSkills(skill.name)}
           />
         )}
       </div>
@@ -244,13 +290,26 @@ const styles = StyleSheet.create({
     boxShadow: '5px 5px',
     fontFamily: "'Voltaire', sans-serif",
     fontSize: '18pt',
-    left: '65%',
+    left: '55%',
     padding: 16,
     position: 'absolute',
     textAlign: 'center',
-    top: 100,
+    top: 16,
     width: 200,
   },
+  reset: {
+    backgroundColor: 'white',
+    border: '1px solid black',
+    boxShadow: '5px 5px',
+    cursor: 'pointer',
+    fontFamily: "'Voltaire', sans-serif",
+    left: '80%',
+    padding: 16,
+    position: 'absolute',
+    textAlign: 'center',
+    top: 16,
+    width: 140,
+  }
 });
 
 export default App;

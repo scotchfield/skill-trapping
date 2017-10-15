@@ -31,6 +31,7 @@ class Skill extends Component {
           styles.skill,
           style,
           active && styles.active,
+          !active && highlight === 'hover' && styles.highlightHover,
           !active && highlight === 0 && styles.highlightFree,
           !active && highlight === 1 && styles.highlightSingle,
           !active && highlight === 2 && styles.highlightDouble,
@@ -67,15 +68,19 @@ const styles = StyleSheet.create({
   },
   active: {
     backgroundColor: 'yellow',
+    fontWeight: 700,
+  },
+  highlightHover: {
+    backgroundColor: 'yellow',
   },
   highlightFree: {
-    backgroundColor: '#ccff99',
+    backgroundColor: '#99ccff',
   },
   highlightSingle: {
     backgroundColor: '#99ccff',
   },
   highlightDouble: {
-    backgroundColor: '#ff99cc',
+    backgroundColor: '#99ccff',
   },
 })
 
